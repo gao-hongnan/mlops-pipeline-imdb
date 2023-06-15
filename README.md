@@ -92,7 +92,7 @@ def extract_from_data_warehouse(
 ## Pipeline Training
 
 ```bash
-export PYTHONPATH="${PYTHONPATH}:/Users/reighns/gaohn/pipeline/end2end-movie-recommender-system/pipeline-training"
+export PYTHONPATH="${PYTHONPATH}:/Users/gaohn/gaohn/mlops-pipeline-imdb/pipeline-training"
 ```
 
 ```bash
