@@ -1,13 +1,14 @@
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
 import pandas as pd
 from common_utils.core.base import Connection
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC
+from rich.pretty import pprint
 
 from conf.metadata import Metadata
-import json
-from pathlib import Path
-from rich.pretty import pprint
-from types import SimpleNamespace
 
 
 def fetch_dvc_metadata(dvc: SimpleDVC, filename: str) -> dict:

@@ -65,30 +65,15 @@ def validate_processed(df: pd.DataFrame, schema: Dict[str, Any]) -> None:
 from types import SimpleNamespace
 
 
-def test_validate_raw(cfg: SimpleNamespace, logger: Logger):
+def test_validate_raw(cfg: SimpleNamespace, metadata: Metadata, logger: Logger):
     from conf.metadata import Metadata
     from pipeline_training.data_extraction.extract import (
         test_extract_from_data_warehouse,
     )
 
-    # Prepare your schema outside, in production this should be in a constant file or database
-    SCHEMA = {
-        "tconst": "object",
-        "primaryTitle": "object",
-        "originalTitle": "object",
-        "isAdult": "float64",
-        "startYear": "float64",
-        "endYear": "float64",
-        "runtimeMinutes": "object",
-        "genres": "object",
-        "averageRating": "float64",
-        "numVotes": "float64",
-        "last_modified": "object",
-    }
-    metadata: Metadata = test_extract_from_data_warehouse(cfg, logger)
     raw_df = metadata.raw_df
 
-    validate_raw(df=raw_df, schema=SCHEMA, metadata=metadata)
+    validate_raw(df=raw_df, schema=cfg.raw_schema, metadata=metadata)
 
 
 if __name__ == "__main__":
@@ -99,6 +84,9 @@ if __name__ == "__main__":
 
     from conf.init_dirs import ROOT_DIR
     from conf.init_project import initialize_project
+    from pipeline_training.data_extraction.extract import (
+        test_extract_from_data_warehouse,
+    )
 
     cfg = initialize_project(ROOT_DIR)
     logger = Logger(
@@ -108,4 +96,6 @@ if __name__ == "__main__":
         propagate=False,
     ).logger
 
-    test_validate_raw(cfg=cfg, logger=logger)
+    metadata: Metadata = test_extract_from_data_warehouse(cfg, logger)
+
+    test_validate_raw(cfg=cfg, logger=logger, metadata=metadata)

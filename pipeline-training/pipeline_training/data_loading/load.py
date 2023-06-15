@@ -86,18 +86,16 @@ def load(
     # Determine the file format
     metadata.raw_file_format = filepath.suffix[1:]  # remove the leading dot
 
-    metadata.release("raw_df")
-
     if dvc is not None:
         # add local file to dvc
-        dvc_metadata = dvc.add(dirs.raw / f"{table_name}.csv")
+        raw_dvc_metadata = dvc.add(filepath)
         try:
-            dvc.push(dirs.raw / f"{table_name}.csv")
-        except Exception as error:
+            dvc.push(filepath)
+        except Exception as error:  # pylint: disable=broad-except
             logger.error(f"File is already tracked by DVC. Error: {error}")
 
-        metadata.dvc_metadata = dvc_metadata
-        pprint(metadata.dvc_metadata)
+        metadata.raw_dvc_metadata = raw_dvc_metadata
+        pprint(metadata.raw_dvc_metadata)
 
     return metadata
 
