@@ -91,7 +91,7 @@ def preprocess_data(
 
     if dvc is not None:
         # add local file to dvc
-        processed_dvc_metadata = dvc.add(filepath, save_metadata=True)
+        processed_dvc_metadata = dvc.add(filepath, save_metadata=False)
         try:
             dvc.push(filepath)
         except Exception as error:  # pylint: disable=broad-except

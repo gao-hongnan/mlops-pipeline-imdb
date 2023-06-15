@@ -88,7 +88,7 @@ def load(
 
     if dvc is not None:
         # add local file to dvc
-        raw_dvc_metadata = dvc.add(filepath)
+        raw_dvc_metadata = dvc.add(filepath, save_metadata=False)
         try:
             dvc.push(filepath)
         except Exception as error:  # pylint: disable=broad-except
