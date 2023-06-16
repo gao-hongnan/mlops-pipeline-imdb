@@ -39,6 +39,10 @@ from common_utils.core.common import generate_uuid
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 from rich.pretty import pprint
 
+# Note, using enum means that the values are unique and constant.
+# Using pydanitc models means that the values may be unique, but they are not
+# constant.
+
 
 class BaseDirType(Enum):
     DATA = "data"
@@ -47,7 +51,6 @@ class BaseDirType(Enum):
 
 class DataDirType(Enum):
     RAW = "raw"
-    INTERIM = "interim"
     PROCESSED = "processed"
 
 
@@ -58,16 +61,38 @@ class StoresDirType(Enum):
     BLOB = "blob"
 
 
-class Directories(BaseModel):
+class BlobDirType(Enum):
+    RAW = "raw"
+    PROCESSED = "processed"
+
+
+class BlobDirectories(BaseModel):
+    raw: Path = Field(..., description="This is the directory for raw blob data.")
+    processed: Path = Field(
+        ..., description="This is the directory for processed blob data."
+    )
+
+
+class DataDirectories(BaseModel):
     raw: Path = Field(..., description="This is the directory for raw data.")
-    interim: Path = Field(..., description="This is the directory for interim data.")
     processed: Path = Field(
         ..., description="This is the directory for processed data."
     )
+
+
+class StoresDirectories(BaseModel):
     logs: Path = Field(..., description="This is the directory for logs.")
     registry: Path = Field(..., description="This is the directory for registry.")
     artifacts: Path = Field(..., description="This is the directory for artifacts.")
-    blob: Path = Field(..., description="This is the directory for blobs.")
+    blob: BlobDirectories = Field(..., description="This is the blob directories.")
+
+
+class Directories(BaseModel):
+    root: Path = Field(..., description="This is the root directory.")
+    data: DataDirectories = Field(..., description="This is the data directories.")
+    stores: StoresDirectories = Field(
+        ..., description="This is the stores directories."
+    )
 
 
 ROOT_DIR = Path(__file__).parent.parent.absolute()
@@ -81,19 +106,35 @@ def create_new_dirs(run_id: Optional[str] = None) -> Directories:
     data_dir = Path(ROOT_DIR, BaseDirType.DATA.value)
     stores_dir = Path(ROOT_DIR, BaseDirType.STORES.value, run_id)
 
-    dirs_dict: Dict[str, Path] = {}
+    data_dirs_dict: Dict[str, Path] = {}
+    stores_dirs_dict: Dict[str, Path] = {}
+    blob_dirs_dict: Dict[str, Path] = {}
 
     # Creating directories under data
     for data_dir_type in DataDirType:
         data_dir_path = Path(data_dir, data_dir_type.value)
         data_dir_path.mkdir(parents=True, exist_ok=True)
-        dirs_dict[data_dir_type.value] = data_dir_path
+        data_dirs_dict[data_dir_type.value] = data_dir_path
 
     # Creating directories under stores
     for store_dir_type in StoresDirType:
         store_dir_path = Path(stores_dir, store_dir_type.value)
         store_dir_path.mkdir(parents=True, exist_ok=True)
-        dirs_dict[store_dir_type.value] = store_dir_path
+        if store_dir_type.value == "blob":
+            for blob_dir_type in BlobDirType:
+                blob_dir_path = Path(store_dir_path, blob_dir_type.value)
+                blob_dir_path.mkdir(parents=True, exist_ok=True)
+                blob_dirs_dict[blob_dir_type.value] = blob_dir_path
+            stores_dirs_dict[store_dir_type.value] = BlobDirectories(**blob_dirs_dict)
+        else:
+            stores_dirs_dict[store_dir_type.value] = store_dir_path
+
+    dirs_dict = {
+        "root": ROOT_DIR,
+        "data": DataDirectories(**data_dirs_dict),
+        "stores": StoresDirectories(**stores_dirs_dict),
+    }
+
     return Directories(**dirs_dict)
 
 

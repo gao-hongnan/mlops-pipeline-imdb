@@ -1,14 +1,11 @@
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
-import numpy as np
-import pandas as pd
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC
 from nltk.stem import PorterStemmer
 from rich.pretty import pprint
-from sklearn.model_selection import train_test_split
 
 from conf.init_dirs import Directories
 from conf.metadata import Metadata
@@ -64,16 +61,12 @@ def preprocess_data(
     df = df[["originalTitle", "genres", "averageRating"]]
     df["cleaned_originalTitle"] = df["originalTitle"].apply(
         clean_text,
-        lower=cfg.lower,
-        stem=cfg.stem,
-        stopwords=cfg.stopwords,
+        **cfg.transform.__dict__,
     )
     df["rounded_averageRating"] = df["averageRating"].round().astype(int)
     df["cleaned_genres"] = df["genres"].apply(
         clean_text,
-        lower=cfg.lower,
-        stem=cfg.stem,
-        stopwords=cfg.stopwords,
+        **cfg.transform.__dict__,
     )
     df["cleaned_genres"] = df["cleaned_genres"].apply(
         lambda x: x.replace(" ", "_")
@@ -86,12 +79,12 @@ def preprocess_data(
     pprint(df.rounded_averageRating.value_counts())
     pprint(df.head())
 
-    filepath: Path = dirs.processed / f"{metadata.raw_table_name}.csv"
+    filepath: Path = dirs.data.processed / f"{metadata.raw_table_name}.csv"
     df.to_csv(filepath, index=False)
 
     if dvc is not None:
         # add local file to dvc
-        processed_dvc_metadata = dvc.add(filepath, save_metadata=False)
+        processed_dvc_metadata = dvc.add(filepath)
         try:
             dvc.push(filepath)
         except Exception as error:  # pylint: disable=broad-except

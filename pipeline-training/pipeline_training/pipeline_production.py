@@ -43,7 +43,7 @@ def extract_from_dvc(
             remote_bucket_project_name=dvc_metadata["remote_bucket_project_name"],
         )
 
-        raw_df: pd.DataFrame = pd.read_csv(Path(cfg.dirs.raw) / filename)
+        raw_df: pd.DataFrame = pd.read_csv(Path(cfg.general.dirs.raw) / filename)
         pprint(raw_df.head())
 
         logger.info("✅ Data extraction from DVC completed. Updating metadata...")
@@ -75,21 +75,21 @@ if __name__ == "__main__":
 
     logger = Logger(
         log_file="pipeline_training.log",
-        log_root_dir=cfg.dirs.logs,
+        log_root_dir=cfg.general.dirs.stores.logs,
         module_name=__name__,
         propagate=False,
     ).logger
 
     gcs = GCS(
-        project_id=cfg.project_id,
-        google_application_credentials=cfg.google_application_credentials,
-        bucket_name=cfg.gcs_bucket_name,
+        project_id=cfg.env.project_id,
+        google_application_credentials=cfg.env.google_application_credentials,
+        bucket_name=cfg.env.gcs_bucket_name,
     )
 
     dvc = SimpleDVC(
         storage=gcs,
-        remote_bucket_project_name=cfg.gcs_bucket_project_name,
-        data_dir=cfg.dirs.raw,
+        remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
+        data_dir=cfg.general.dirs.data.raw,
     )
     metadata = Metadata()
     extract_from_dvc(cfg=cfg, dvc=dvc, logger=logger, metadata=metadata)

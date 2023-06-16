@@ -73,7 +73,7 @@ def test_validate_raw(cfg: SimpleNamespace, metadata: Metadata, logger: Logger):
 
     raw_df = metadata.raw_df
 
-    validate_raw(df=raw_df, schema=cfg.raw_schema, metadata=metadata)
+    validate_raw(df=raw_df, schema=cfg.general.raw_schema, metadata=metadata)
 
 
 if __name__ == "__main__":
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     cfg = initialize_project(ROOT_DIR)
     logger = Logger(
         log_file="pipeline_training.log",
-        log_root_dir=cfg.dirs.logs,
+        log_root_dir=cfg.general.dirs.stores.logs,
         module_name=__name__,
         propagate=False,
     ).logger

@@ -77,7 +77,7 @@ def load(
     logger.info("Reading data from metadata computed in the previous step...")
     raw_df = metadata.raw_df
     table_name = metadata.raw_table_name
-    filepath: Path = dirs.raw / f"{table_name}.csv"
+    filepath: Path = dirs.data.raw / f"{table_name}.csv"
 
     raw_df.to_csv(filepath, index=False)
     # Calculate the size of the file
@@ -88,7 +88,7 @@ def load(
 
     if dvc is not None:
         # add local file to dvc
-        raw_dvc_metadata = dvc.add(filepath, save_metadata=False)
+        raw_dvc_metadata = dvc.add(filepath)
         try:
             dvc.push(filepath)
         except Exception as error:  # pylint: disable=broad-except
@@ -118,37 +118,39 @@ if __name__ == "__main__":
 
     logger = Logger(
         log_file="pipeline_training.log",
-        log_root_dir=cfg.dirs.logs,
+        log_root_dir=cfg.stores.logs,
         module_name=__name__,
         propagate=False,
     ).logger
 
     gcs = GCS(
-        project_id=cfg.project_id,
-        google_application_credentials=cfg.google_application_credentials,
-        bucket_name=cfg.gcs_bucket_name,
+        project_id=cfg.env.project_id,
+        google_application_credentials=cfg.env.google_application_credentials,
+        bucket_name=cfg.env.gcs_bucket_name,
     )
+
     dvc = SimpleDVC(
         storage=gcs,
-        remote_bucket_project_name=cfg.gcs_bucket_project_name,
-        data_dir=cfg.dirs.raw,
+        remote_bucket_project_name=cfg.env.gcs_bucket_project_name,
+        data_dir=cfg.general.dirs.data.raw,
+        metadata_dir=cfg.general.dirs.stores.blob.raw,
     )
 
     ### extract.py
     metadata = test_extract_from_data_warehouse(logger=logger, cfg=cfg)
 
     ### load.py
-    metadata = load(metadata=metadata, logger=logger, dirs=cfg.dirs, dvc=dvc)
+    metadata = load(metadata=metadata, logger=logger, dirs=cfg.general.dirs, dvc=dvc)
     pprint(metadata)
 
     # reinitialize to pull
     # cfg = initialize_project(ROOT_DIR)
     # gcs = GCS(
-    #     project_id=cfg.project_id,
-    #     google_application_credentials=cfg.google_application_credentials,
-    #     bucket_name=cfg.gcs_bucket_name,
+    #     project_id=cfg.env.project_id,
+    #     google_application_credentials=cfg.env.google_application_credentials,
+    #     bucket_name=cfg.env.gcs_bucket_name,
     # )
-    # dvc = SimpleDVC(data_dir=cfg.dirs.raw, storage=gcs)
+    # dvc = SimpleDVC(data_dir=cfg.general.dirs.data.raw, storage=gcs)
     # filename = "filtered_movies_incremental.csv"
     # remote_project_name = "imdb"
     # dvc.pull(filename=filename, remote_project_name=remote_project_name)

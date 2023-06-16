@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Any, Dict
 
@@ -11,6 +12,10 @@ class Metadata:
     # tracks the inner state of the pipeline, update as it traverses the pipeline.
     # e.g. if the pipeline fails at a certain stage, we can use this to restart
     # from that stage.
+
+    # general
+    pipeline_name: str = None
+    git_commit_hash: str = None
 
     # inside extract.py
     raw_df: pd.DataFrame = None
@@ -42,6 +47,9 @@ class Metadata:
     y_train: pd.DataFrame = None
     y_test: pd.DataFrame = None
     y_val: pd.DataFrame = None
+
+    # inside train.py
+    model_artifacts: Dict[str, Any] = None
 
     def release(self, attribute: str) -> Any:
         self.__setattr__(attribute, None)

@@ -1,28 +1,14 @@
-import mlflow
-
 import warnings
 from typing import Any, Dict
-
+from common_utils.core.common import seed_all
 import mlflow
 import numpy as np
-import pandas as pd
 from rich.pretty import pprint
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import log_loss, precision_recall_fscore_support
+
+
 from pipeline_training.data_preparation.resampling import get_data_splits
-
-# from cfg.base import Config
-# from cfg.model import ScikitLearnModel
-# from src.datamodule.preprocess import get_data_splits
-# from src.utils.common import log_data_splits_summary
-
-tracking_uri = "http://34.94.42.137:5001"
-experiment_name = "imdb_revamp"
-run_name = "untuned_imdb_sgd_dummy"
-nested = False
-
-mlflow.set_tracking_uri(tracking_uri)
-mlflow.set_experiment(experiment_name=experiment_name)
 
 
 warnings.filterwarnings("ignore")
@@ -45,31 +31,14 @@ def predict_on_holdout_set(
     return performance
 
 
-from sklearn.linear_model import SGDClassifier
-
-model = SGDClassifier(
-    loss="log",
-    penalty="l2",
-    alpha=0.0001,
-    max_iter=1,
-    learning_rate="optimal",
-    eta0=0.1,
-    power_t=0.1,
-    warm_start=True,
-)
-
-
-def train_model(cfg, logger, metadata) -> Dict[str, Any]:
+def train_model(cfg, logger, metadata, model) -> Dict[str, Any]:
     """Train model."""
-    logger = cfg.logger.logger
     logger.info("Training model...")
 
     # Tf-idf
-    vectorizer = TfidfVectorizer(
-        analyzer=cfg.misc.analyzer, ngram_range=cfg.misc.ngram_range
-    )
+    vectorizer = TfidfVectorizer(**cfg.train.vectorizer)
 
-    df = pd.read_csv(input_filepath)
+    df = metadata.processed_df
 
     X = df["concat_title_genres"].to_numpy()
     y = df["rounded_averageRating"].to_numpy()
@@ -77,7 +46,6 @@ def train_model(cfg, logger, metadata) -> Dict[str, Any]:
     y = np.where(y > 5, 1, 0)
 
     X_train, X_val, X_test, y_train, y_val, y_test = get_data_splits(cfg=cfg, X=X, y=y)
-    pprint(X_train)
 
     # row is your data point, column is your feature
     # which is the tf-idf score of the word in that data point.
@@ -97,16 +65,11 @@ def train_model(cfg, logger, metadata) -> Dict[str, Any]:
     X_val = vectorizer.transform(X_val)
     X_test = vectorizer.transform(X_test)
 
-    # NOTE: purposely put max_iter = 1 to illustrate the concept of
-    # gradient descent. This will raise convergence warning.
-    # Model initialization
-
-    model = cfg.model.model
     pprint(model.get_params())
 
     # Training
 
-    for epoch in range(cfg.misc.num_epochs):
+    for epoch in range(cfg.train.num_epochs):
         model.fit(X_train, y_train)
         train_loss = log_loss(y_train, model.predict_proba(X_train))
         # evaluate on validation data
@@ -115,7 +78,7 @@ def train_model(cfg, logger, metadata) -> Dict[str, Any]:
         # Log performance metrics for the current epoch
         mlflow.log_metrics({"train_loss": train_loss, "val_loss": val_loss}, step=epoch)
 
-        if not epoch % 10:
+        if not epoch % cfg.train.log_every_n_epoch:
             logger.info(
                 f"Epoch: {epoch:02d} | "
                 f"train_loss: {train_loss:.5f}, "
@@ -129,11 +92,32 @@ def train_model(cfg, logger, metadata) -> Dict[str, Any]:
     # When the model is deployed, this signature will be used to validate inputs.
     signature = mlflow.models.infer_signature(X_test, model.predict(X_test))
 
-    artifacts = {
+    model_artifacts = {
         "vectorizer": vectorizer,
         "model": model,
         "performance": performance,
         "signature": signature,
         "model_config": model.get_params(),
     }
-    return artifacts
+    metadata.model_artifacts = model_artifacts
+    return metadata
+
+
+def train(cfg, logger, metadata, model):
+    seed_all(cfg.general.seed, seed_torch=False)
+    mlflow.set_experiment(experiment_name=cfg.exp.experiment_name)
+
+    # nested=True because this is nested under a parent train func in main.py.
+    with mlflow.start_run(**cfg.exp.start_run):
+        run_id = mlflow.active_run().info.run_id
+        logger.info(f"MLflow run_id: {run_id}")
+
+        metadata = train_model(cfg, logger, metadata, model)
+        pprint(metadata.model_artifacts)
+
+        mlflow.sklearn.log_model(
+            sk_model=metadata.model_artifacts["model"],
+            artifact_path="model",
+            signature=metadata.model_artifacts["signature"],
+        )
+    return metadata

@@ -108,10 +108,10 @@ def test_extract_from_data_warehouse(cfg: SimpleNamespace, logger: Logger) -> Me
     from common_utils.cloud.gcp.database.bigquery import BigQuery
 
     bq = BigQuery(
-        project_id=cfg.project_id,
-        google_application_credentials=cfg.google_application_credentials,
-        dataset=cfg.bigquery_raw_dataset,
-        table_name=cfg.bigquery_raw_table_name,
+        project_id=cfg.env.project_id,
+        google_application_credentials=cfg.env.google_application_credentials,
+        dataset=cfg.env.bigquery_raw_dataset,
+        table_name=cfg.env.bigquery_raw_table_name,
     )
 
     QUERY = """
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     logger = Logger(
         log_file="pipeline_training.log",
-        log_root_dir=cfg.dirs.logs,
+        log_root_dir=cfg.general.dirs.stores.logs,
         module_name=__name__,
         propagate=False,
     ).logger

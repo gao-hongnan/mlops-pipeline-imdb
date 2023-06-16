@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gaohn-pipeline-training-imdb"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="Gao Hongnan", email="hongnangao@gmail.com" },
 ]
