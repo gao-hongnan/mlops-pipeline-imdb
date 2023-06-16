@@ -1,0 +1,110 @@
+[tool.black]
+line-length = 88
+target-version = ['py37', 'py38', 'py39']
+verbose = false
+diff = false
+color = false
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs                      # exclude a few common directories in the
+  | \.git                       # root of the project
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | (.*/)?venv_.*/.*
+  | (.*/)?\.venv/.*
+  | (.*/)?venv/.*
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+verbose = false
+skip = [
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    "venv_*",
+    "venv",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+]
+skip_glob = [
+    "**/venv_*",
+    "venv",
+    ".venv",
+]
+
+[tool.pylint]
+    [tool.pylint.'MASTER']
+    ignore-paths = [
+        "(.*\\/)?venv_.*\\/.*",
+        "(.*\\/)?\\.venv\\/.*",
+        "(.*\\/)?venv\\/.*",
+    ]
+    ignore = [
+        ".eggs",
+        ".git",
+        ".hg",
+        ".mypy_cache",
+        ".tox",
+        "venv_*",
+        "venv",
+        ".venv",
+        "_build",
+        "buck-out",
+        "build",
+        "dist",
+    ]
+    [tool.pylint.'MESSAGES CONTROL']
+    disable = [
+        "redefined-outer-name",
+        "missing-module-docstring",
+        "missing-class-docstring",
+        "missing-function-docstring",
+        "fixme",
+        "reimported",
+        "ungrouped-imports",
+    ]
+
+# https://bandit.readthedocs.io/en/latest/config.html
+[tool.bandit]
+exclude_dirs = [
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    "venv_*",
+    "venv",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+]
+
+# https://mypy.readthedocs.io/en/stable/config_file.html#using-a-pyproject-toml-file
+[tool.mypy]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disable_error_code = ['override', 'attr-defined']
+disallow_any_generics = false
+
+[tool.pytest.ini_options]
+# add any pytest options here, for example:
+# addopts = --verbose --capture=no
+testpaths = "tests"
+filterwarnings = "ignore::DeprecationWarning" # ignore deprecation warnings when running tests

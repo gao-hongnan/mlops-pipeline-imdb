@@ -11,7 +11,7 @@ runs:
           --severity-level=low \
           --format=json \
           --output=bandit_results.json \
-          common_utils
+          pipeline-training
       shell: bash
       if: always()
     - name: Run Linter Check
@@ -23,7 +23,7 @@ runs:
           --fail-under=10 \
           --score=yes \
           --output-format=json:pylint_results.json,colorized \
-          common_utils
+          pipeline-training
       shell: bash
       if: always()
     - name: Run Formatter Black Check
@@ -35,7 +35,7 @@ runs:
           --diff \
           --color \
           --verbose \
-          common_utils
+          pipeline-training
       shell: bash
       if: always()
     - name: Run Formatter Isort Check
@@ -47,7 +47,7 @@ runs:
           --diff \
           --color \
           --verbose \
-          common_utils
+          pipeline-training
       shell: bash
       if: always()
     - name: Run MyPy Type Check
@@ -56,7 +56,7 @@ runs:
         chmod +x ci_typing_mypy.sh
         bash ci_typing_mypy.sh \
           --config-file=pyproject.toml \
-          common_utils \
+          pipeline-training \
           | tee mypy_results.log
       shell: bash
       if: always()
