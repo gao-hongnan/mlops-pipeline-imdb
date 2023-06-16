@@ -190,6 +190,84 @@ Finally, run `bash build.sh` to build the docker image and run the container.
 Once successful, you can then access the MLFlow UI at
 `http://<EXTERNAL_VM_IP>:5001`.
 
+## Containerization
+
+## Good Practices
+
+- Tagging the image with the commit hash of the code used to build the image.
+
+### Build Docker Image Locally
+
+You need to build using `linux/amd64` platform or else GKE will encounter an
+[**error**](https://stackoverflow.com/questions/42494853/standard-init-linux-go178-exec-user-process-caused-exec-format-error).
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
+docker build \
+--build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
+--platform=linux/amd64 \
+-f pipeline-training/Dockerfile \
+-t pipeline-training:$GIT_COMMIT_HASH \
+.
+```
+
+### Run Docker Image Locally
+
+```bash
+docker run -it \
+    --env PROJECT_ID="${PROJECT_ID}" \
+    --env GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
+    --env GCS_BUCKET_NAME="${GCS_BUCKET_NAME}" \
+    --env GCS_BUCKET_PROJECT_NAME="${GCS_BUCKET_PROJECT_NAME}" \
+    --env BIGQUERY_RAW_DATASET="${BIGQUERY_RAW_DATASET}" \
+    --env BIGQUERY_RAW_TABLE_NAME="${BIGQUERY_RAW_TABLE_NAME}" \
+    pipeline-training:${GIT_COMMIT_HASH}
+
+docker run -it \
+    --env PROJECT_ID="gao-hongnan" \
+    --env GOOGLE_APPLICATION_CREDENTIALS="/pipeline-training/gcp-storage-service-account.json" \
+    --env GCS_BUCKET_NAME="gaohn" \
+    --env GCS_BUCKET_PROJECT_NAME="imdb" \
+    --env BIGQUERY_RAW_DATASET=imdb_dbt_filtered_movies_incremental \
+    --env BIGQUERY_RAW_TABLE_NAME=filtered_movies_incremental \
+    pipeline-training:${GIT_COMMIT_HASH}
+
+docker exec -it mlops-pipeline-v1 /bin/bash
+```
+
+### Build Docker Image to Push to Container Registry
+
+Check `gar_docker_setup` in my `common-utils` on how to set up a container
+registry in GCP.
+
+```bash
+export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
+export PROJECT_ID="gao-hongnan" && \
+export REPO_NAME="imdb-repo" && \
+export APP_NAME="mlops-pipeline-imdb" && \
+export REGION="us-west2" && \
+docker build \
+--build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
+-f pipeline-training/Dockerfile \
+--platform=linux/amd64 \
+-t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" \
+.
+```
+
+### Push Docker Image to Artifacts Registry
+
+```bash
+docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" && \
+echo "Successfully pushed ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}"
+```
+
+### Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine
+
+Note you do not need to provide the `GIT_COMMIT_HASH` as the image is already
+tagged with the `GIT_COMMIT_HASH`.
+
+- Set up `Expose` to false since this is not a web app.
+
 ## Pipeline Training
 
 ```bash
@@ -285,78 +363,4 @@ Create data and store dir.
 2. Spend time describing my `Logger` class!
 3. Spend time talking about my `DVC` implementation.
 
-## Docker Stuff
 
-- Docker is tagged by git commit hash. This is to ensure that the docker image
-    is unique and can be traced back to the git commit hash.
-- Built from the root!
-
-### Build Docker Image Locally
-
-You need to build using `linux/amd64` platform or else GKE will encounter an
-[**error**](https://stackoverflow.com/questions/42494853/standard-init-linux-go178-exec-user-process-caused-exec-format-error).
-
-```bash
-export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
-docker build \
---build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
---platform=linux/amd64 \
--f pipeline-training/Dockerfile \
--t pipeline-training:$GIT_COMMIT_HASH \
-.
-```
-
-### Build Docker Image to Push to Container Registry
-
-Check `gar_docker_setup` in my `common-utils` on how to set up a container
-registry in GCP.
-
-```bash
-export GIT_COMMIT_HASH=$(git rev-parse --short HEAD) && \
-export PROJECT_ID="gao-hongnan" && \
-export REPO_NAME="imdb-repo" && \
-export APP_NAME="mlops-pipeline-imdb" && \
-export REGION="us-west2" && \
-docker build \
---build-arg GIT_COMMIT_HASH=$GIT_COMMIT_HASH \
--f pipeline-training/Dockerfile \
---platform=linux/amd64 \
--t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" \
-.
-```
-
-### Push Docker Image to Artifacts Registry
-
-```bash
-docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}" && \
-echo "Successfully pushed ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${APP_NAME}:${GIT_COMMIT_HASH}"
-```
-
-### Deploy Docker Image from Artifacts Registry to Google Kubernetes Engine
-
-Note you do not need to provide the `GIT_COMMIT_HASH` as the image is already
-tagged with the `GIT_COMMIT_HASH`.
-
-- Set up `Expose` to false since this is not a web app.
-
-```
-docker run -it \
-    --env PROJECT_ID="${PROJECT_ID}" \
-    --env GOOGLE_APPLICATION_CREDENTIALS="${GOOGLE_APPLICATION_CREDENTIALS}" \
-    --env GCS_BUCKET_NAME="${GCS_BUCKET_NAME}" \
-    --env GCS_BUCKET_PROJECT_NAME="${GCS_BUCKET_PROJECT_NAME}" \
-    --env BIGQUERY_RAW_DATASET="${BIGQUERY_RAW_DATASET}" \
-    --env BIGQUERY_RAW_TABLE_NAME="${BIGQUERY_RAW_TABLE_NAME}" \
-    pipeline-training:${GIT_COMMIT_HASH}
-
-docker run -it \
-    --env PROJECT_ID="gao-hongnan" \
-    --env GOOGLE_APPLICATION_CREDENTIALS="/pipeline-training/gcp-storage-service-account.json" \
-    --env GCS_BUCKET_NAME="gaohn" \
-    --env GCS_BUCKET_PROJECT_NAME="imdb" \
-    --env BIGQUERY_RAW_DATASET=imdb_dbt_filtered_movies_incremental \
-    --env BIGQUERY_RAW_TABLE_NAME=filtered_movies_incremental \
-    pipeline-training:${GIT_COMMIT_HASH}
-
-docker exec -it mlops-pipeline-v1 /bin/bash
-```
