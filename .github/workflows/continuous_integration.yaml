@@ -42,7 +42,7 @@ jobs:
       - name: Install dev dependencies
         run: |
           python3 -m pip install --upgrade pip setuptools wheel
-          python3 -m pip install -r requirements_dev.txt
+          python3 -m pip install -r pipeline-training/requirements_dev.txt
       - name: Run Continuous Integration Action
         uses: ./.github/actions/continuous-integration
         continue-on-error: true
