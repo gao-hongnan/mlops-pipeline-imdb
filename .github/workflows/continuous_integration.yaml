@@ -1,0 +1,48 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - continuous-integration
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
+  pull_request:
+    branches:
+      - main
+      - continuous-integration
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
+
+jobs:
+  continuous-integration:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Environment setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: pip
+      - name: Get pip cache directory path
+        id: pip-cache
+        run: echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT # set-output is deprecated.
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements_dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+      - name: Install dev dependencies
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install -r requirements_dev.txt
+      - name: Run Continuous Integration Action
+        uses: ./.github/actions/continuous-integration
+        continue-on-error: true
