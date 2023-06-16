@@ -1,5 +1,10 @@
 name: "Continuous Integration (CI)"
 description: "DevOps: Run CI checks on pull requests and pushes to main branch."
+inputs:
+  packages_to_check:
+    description: "List of packages to check."
+    required: true
+    default: "pipeline-training"
 runs:
   using: "composite"
   steps:
@@ -11,7 +16,7 @@ runs:
           --severity-level=low \
           --format=json \
           --output=bandit_results.json \
-          pipeline-training
+          ${{ inputs.packages_to_check }}
       shell: bash
       if: always()
     - name: Run Linter Check
@@ -23,7 +28,7 @@ runs:
           --fail-under=10 \
           --score=yes \
           --output-format=json:pylint_results.json,colorized \
-          pipeline-training
+          ${{ inputs.packages_to_check }}
       shell: bash
       if: always()
     - name: Run Formatter Black Check
@@ -35,7 +40,7 @@ runs:
           --diff \
           --color \
           --verbose \
-          pipeline-training
+          ${{ inputs.packages_to_check }}
       shell: bash
       if: always()
     - name: Run Formatter Isort Check
@@ -47,7 +52,7 @@ runs:
           --diff \
           --color \
           --verbose \
-          pipeline-training
+          ${{ inputs.packages_to_check }}
       shell: bash
       if: always()
     - name: Run MyPy Type Check
@@ -56,7 +61,7 @@ runs:
         chmod +x ci_typing_mypy.sh
         bash ci_typing_mypy.sh \
           --config-file=pyproject.toml \
-          pipeline-training \
+          ${{ inputs.packages_to_check }} \
           | tee mypy_results.log
       shell: bash
       if: always()

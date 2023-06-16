@@ -22,6 +22,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+    env:
+      PACKAGES_TO_CHECK: "pipeline-training" # "package1 package2 package3"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -45,4 +47,6 @@ jobs:
           python3 -m pip install -r pipeline-training/requirements_dev.txt
       - name: Run Continuous Integration Action
         uses: ./.github/actions/continuous-integration
+        with:
+          packages_to_check: ${{ env.PACKAGES_TO_CHECK }}
         continue-on-error: true

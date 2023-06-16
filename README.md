@@ -1,5 +1,7 @@
 # Flow
 
+[![Continuous Integration](https://github.com/gao-hongnan/mlops-pipeline-imdb/actions/workflows/continuous_integration.yaml/badge.svg)](https://github.com/gao-hongnan/mlops-pipeline-imdb/actions/workflows/continuous_integration.yaml)
+
 ## GOOGLE DIAGRAM
 
 The terminology of "Orchestrated Experiment" and "Automated Pipeline" in Google's MLOps diagram refers to different stages of a machine learning project.
