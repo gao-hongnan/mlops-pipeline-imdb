@@ -4,14 +4,14 @@ on:
   push:
     branches:
       - main
-      - continuous-integration
+      - pipeline
     paths-ignore:
       - "README.md"
       - "docs/**"
   pull_request:
     branches:
       - main
-      - continuous-integration
+      - pipeline
     paths-ignore:
       - "README.md"
       - "docs/**"
