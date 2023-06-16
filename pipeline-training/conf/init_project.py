@@ -6,9 +6,14 @@ from typing import Literal, Union
 import rich
 from common_utils.core.common import get_root_dir, load_env_vars
 from common_utils.versioning.git.core import get_git_commit_hash
+import nltk
+
+nltk.download("stopwords")
 from nltk.corpus import stopwords
 
+
 from conf.init_dirs import create_new_dirs
+
 
 STOPWORDS = set(stopwords.words("english"))
 
@@ -28,6 +33,11 @@ RAW_SCHEMA = {
 }
 
 
+def is_docker():
+    path = "/.dockerenv"
+    return os.path.exists(path)
+
+
 # pylint: disable=invalid-name
 def initialize_project(root_dir: str) -> SimpleNamespace:
     DIRS = create_new_dirs()
@@ -35,7 +45,9 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
     ROOT_DIR = get_root_dir(env_var="ROOT_DIR", root_dir=root_dir)
     os.environ["ROOT_DIR"] = str(ROOT_DIR)
 
-    load_env_vars(root_dir=ROOT_DIR)
+    if not is_docker():
+        print("Not running inside docker")
+        load_env_vars(root_dir=ROOT_DIR)
 
     PROJECT_ID = os.getenv("PROJECT_ID")
     GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -51,6 +63,7 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
     )
     if git_commit_hash == "N/A":
         git_commit_hash = os.getenv("GIT_COMMIT_HASH", None)
+        print(f"git_commit_hash: {git_commit_hash} this is inside docker likely.")
         if git_commit_hash is None:
             raise ValueError(
                 """Git commit hash is 'N/A' and environment variable 'GIT_COMMIT_HASH'

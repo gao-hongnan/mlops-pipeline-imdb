@@ -77,6 +77,6 @@ model = SGDClassifier(
     warm_start=True,
 )
 
-tracking_uri = "http://34.94.42.137:5001"
+tracking_uri = "http://34.143.176.217:5001/"
 mlflow.set_tracking_uri(tracking_uri)
 metadata = train(cfg=cfg, metadata=metadata, logger=logger, model=model)
