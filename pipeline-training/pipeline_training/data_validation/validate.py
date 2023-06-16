@@ -66,11 +66,6 @@ from types import SimpleNamespace
 
 
 def test_validate_raw(cfg: SimpleNamespace, metadata: Metadata, logger: Logger):
-    from conf.metadata import Metadata
-    from pipeline_training.data_extraction.extract import (
-        test_extract_from_data_warehouse,
-    )
-
     raw_df = metadata.raw_df
 
     validate_raw(df=raw_df, schema=cfg.general.raw_schema, metadata=metadata)
@@ -79,8 +74,6 @@ def test_validate_raw(cfg: SimpleNamespace, metadata: Metadata, logger: Logger):
 if __name__ == "__main__":
     # these can be tests, note create_new_dirs in production or a new run should
     # only be called once! Same for the logger.
-
-    from common_utils.core.logger import Logger
 
     from conf.init_dirs import ROOT_DIR
     from conf.init_project import initialize_project

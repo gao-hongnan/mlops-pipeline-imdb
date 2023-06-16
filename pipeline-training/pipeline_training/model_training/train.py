@@ -7,7 +7,7 @@ from rich.pretty import pprint
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import log_loss, precision_recall_fscore_support
 
-
+import pickle
 from pipeline_training.data_preparation.resampling import get_data_splits
 
 
@@ -120,4 +120,16 @@ def train(cfg, logger, metadata, model):
             artifact_path="model",
             signature=metadata.model_artifacts["signature"],
         )
+
+        with open(f"{cfg.general.dirs.stores.artifacts}/cfg.pkl", "wb") as file:
+            pickle.dump(cfg, file)
+
+        with open(f"{cfg.general.dirs.stores.artifacts}/metadata.pkl", "wb") as file:
+            pickle.dump(metadata, file)
+
+        stores_path = cfg.general.dirs.stores.base
+        pprint(stores_path)
+
+        mlflow.log_artifacts(local_dir=stores_path, artifact_path="stores")
+
     return metadata

@@ -33,7 +33,7 @@ engineering practices:
 
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from common_utils.core.common import generate_uuid
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
@@ -74,6 +74,7 @@ class BlobDirectories(BaseModel):
 
 
 class DataDirectories(BaseModel):
+    base: Path = Field(..., description="This is the base directory for data.")
     raw: Path = Field(..., description="This is the directory for raw data.")
     processed: Path = Field(
         ..., description="This is the directory for processed data."
@@ -81,6 +82,7 @@ class DataDirectories(BaseModel):
 
 
 class StoresDirectories(BaseModel):
+    base: Path = Field(..., description="This is the base directory for stores.")
     logs: Path = Field(..., description="This is the directory for logs.")
     registry: Path = Field(..., description="This is the directory for registry.")
     artifacts: Path = Field(..., description="This is the directory for artifacts.")
@@ -106,8 +108,8 @@ def create_new_dirs(run_id: Optional[str] = None) -> Directories:
     data_dir = Path(ROOT_DIR, BaseDirType.DATA.value)
     stores_dir = Path(ROOT_DIR, BaseDirType.STORES.value, run_id)
 
-    data_dirs_dict: Dict[str, Path] = {}
-    stores_dirs_dict: Dict[str, Path] = {}
+    data_dirs_dict: Dict[str, Path] = {"base": data_dir}
+    stores_dirs_dict: Dict[str, Path] = {"base": stores_dir}
     blob_dirs_dict: Dict[str, Path] = {}
 
     # Creating directories under data
