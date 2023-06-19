@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/reighns/gaohn/pipeline/mlops-pipeline-imdb/mlruns/0/4e6f4ece334a4e3c921d761a0b56e59f/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 4e6f4ece334a4e3c921d761a0b56e59f
+run_name: smiling-penguin-486
+run_uuid: 4e6f4ece334a4e3c921d761a0b56e59f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1687157371674
+status: 1
+tags: []
+user_id: reighns

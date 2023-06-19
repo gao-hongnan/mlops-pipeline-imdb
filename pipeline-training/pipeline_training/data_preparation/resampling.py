@@ -24,10 +24,11 @@ def get_data_splits(cfg, X: np.ndarray, y: np.ndarray) -> Tuple:
         Tuple: data splits as Numpy arrays.
     """
     # 70-15-15 split
+
     X_train, X_, y_train, y_ = train_test_split(
         X, y, stratify=y, **cfg.resampling.strategy["train_test_split"]
     )
     X_val, X_test, y_val, y_test = train_test_split(
-        X_, y_, train_size=0.5, stratify=y_, random_state=42, shuffle=True
+        X_, y_, stratify=y_, **cfg.resampling.strategy["train_test_split"]
     )
     return (X_train, X_val, X_test, y_train, y_val, y_test)

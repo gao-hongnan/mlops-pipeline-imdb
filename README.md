@@ -31,20 +31,7 @@ will, based on a provided movie title and genre, yield a binary output.
 
 ## Workflow
 
-### Setting up Virtual Environment
-
-We will use the training pipeline as an example to illustrate how to set up the
-virtual environment.
-
-```bash
-cd pipeline-training && \
-curl -o make_venv.sh \
-  https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/make_venv.sh
-```
-
-```bash
-bash make_venv.sh --pyproject --dev
-```
+...
 
 ## Kubernetes
 
@@ -249,7 +236,7 @@ docker run -it \
     --env BIGQUERY_RAW_TABLE_NAME=filtered_movies_incremental \
     pipeline-training:${GIT_COMMIT_HASH}
 
-docker exec -it mlops-pipeline-v1 /bin/bash
+docker exec -it <CONTAINER> /bin/bash
 ```
 
 ### Build Docker Image to Push to Container Registry
@@ -326,6 +313,32 @@ touch utils/__init__.py && \
 ```
 
 Create data and store dir.
+
+### Setting up Virtual Environment
+
+We will use the training pipeline as an example to illustrate how to set up the
+virtual environment.
+
+```bash
+cd pipeline-training && \
+curl -o make_venv.sh \
+  https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/make_venv.sh
+```
+
+```bash
+bash make_venv.sh --pyproject --dev
+```
+
+## Pipeline App
+
+```bash
+cd pipeline-app && \
+mkdir -p api frontend monitoring && \
+```
+
+### Setting up Virtual Environment
+
+...
 
 ## Flow
 

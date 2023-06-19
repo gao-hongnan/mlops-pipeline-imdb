@@ -80,11 +80,6 @@ def load(
     filepath: Path = dirs.data.raw / f"{table_name}.csv"
 
     raw_df.to_csv(filepath, index=False)
-    # Calculate the size of the file
-    metadata.raw_file_size = filepath.stat().st_size
-
-    # Determine the file format
-    metadata.raw_file_format = filepath.suffix[1:]  # remove the leading dot
 
     if dvc is not None:
         # add local file to dvc
@@ -94,9 +89,12 @@ def load(
         except Exception as error:  # pylint: disable=broad-except
             logger.error(f"File is already tracked by DVC. Error: {error}")
 
-        metadata.raw_dvc_metadata = raw_dvc_metadata
-        pprint(metadata.raw_dvc_metadata)
-
+    attr_dict = {
+        "raw_file_size": filepath.stat().st_size,
+        "raw_file_format": filepath.suffix[1:],
+        "raw_dvc_metadata": raw_dvc_metadata if dvc is not None else None,
+    }
+    metadata.set_attrs(attr_dict)
     return metadata
 
 

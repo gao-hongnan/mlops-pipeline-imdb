@@ -51,6 +51,9 @@ class Metadata:
     # inside train.py
     model_artifacts: Dict[str, Any] = None
 
+    # inside evaluate.py
+    best_params: Dict[str, Any] = None
+
     def release(self, attribute: str) -> Any:
         self.__setattr__(attribute, None)
 

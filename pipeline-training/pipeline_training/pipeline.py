@@ -3,7 +3,8 @@ from common_utils.cloud.gcp.storage.gcs import GCS
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC
 from rich.pretty import pprint
-from sklearn.linear_model import SGDClassifier
+
+from common_utils.core.common import seed_all
 
 from conf.init_dirs import ROOT_DIR
 from conf.init_project import initialize_project
@@ -11,9 +12,11 @@ from pipeline_training.data_extraction.extract import test_extract_from_data_war
 from pipeline_training.data_loading.load import load
 from pipeline_training.data_preparation.transform import preprocess_data
 from pipeline_training.data_validation.validate import test_validate_raw
-from pipeline_training.model_training.train import train, train_model
+from pipeline_training.model_training.train import train
+from pipeline_training.model_evaluation.hyperparameter_tuning import optimize
 
 cfg = initialize_project(ROOT_DIR)
+seed_all(cfg.general.seed, seed_torch=False)
 
 logger = Logger(
     log_file="pipeline_training.log",
@@ -66,17 +69,11 @@ pprint(metadata)
 # gradient descent. This will raise convergence warning.
 # Model initialization
 
-model = SGDClassifier(
-    loss="log",
-    penalty="l2",
-    alpha=0.0001,
-    max_iter=1,
-    learning_rate="optimal",
-    eta0=0.1,
-    power_t=0.1,
-    warm_start=True,
-)
+mlflow.set_tracking_uri(cfg.exp.tracking_uri)
+# evaluate
+metadata, cfg = optimize(cfg=cfg, metadata=metadata, logger=logger)
+pprint(metadata)
+pprint(cfg)
 
-tracking_uri = "http://34.143.176.217:5001/"
-mlflow.set_tracking_uri(tracking_uri)
-metadata = train(cfg=cfg, metadata=metadata, logger=logger, model=model)
+metadata = train(cfg=cfg, metadata=metadata, logger=logger, trial=None)
+pprint(metadata)

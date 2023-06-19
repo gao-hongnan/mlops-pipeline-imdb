@@ -3,17 +3,14 @@ import os
 from types import SimpleNamespace
 from typing import Literal, Union
 
+import nltk
 import rich
 from common_utils.core.common import get_root_dir, load_env_vars
 from common_utils.versioning.git.core import get_git_commit_hash
-import nltk
 
 nltk.download("stopwords")
-from nltk.corpus import stopwords
-
-
 from conf.init_dirs import create_new_dirs
-
+from nltk.corpus import stopwords
 
 STOPWORDS = set(stopwords.words("english"))
 
@@ -103,13 +100,46 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
 
     train_config = {
         "vectorizer": {"analyzer": "char_wb", "ngram_range": (2, 5)},
+        "model": {
+            "loss": "log",
+            "penalty": "l2",
+            "alpha": 0.0001,
+            "max_iter": 1,
+            "learning_rate": "optimal",
+            "eta0": 0.1,
+            "power_t": 0.1,
+            "warm_start": True,
+            "random_state": 42,
+        },
         "num_epochs": 5,
         "log_every_n_epoch": 1,
     }
     cfg.train = SimpleNamespace(**train_config)
 
+    hyperparameter_config = {
+        "hyperparams_grid": {
+            "model__analyzer": ["word", "char", "char_wb"],
+            "model__ngram_range": (3, 10),
+            "model__alpha": (1e-2, 1),
+            "model__power_t": (0.1, 0.5),
+        },
+        "create_study": {
+            "study_name": "imdb_sgd_study",
+            "direction": "minimize",
+        },
+        "sampler": {"sampler_name": "optuna.samplers.TPESampler", "seed": 42},
+        "pruner": {
+            "pruner_name": "optuna.pruners.MedianPruner",
+            "n_startup_trials": 5,
+            "n_warmup_steps": 5,
+        },
+        "n_trials": 3,
+    }
+    cfg.hyperparameter = SimpleNamespace(**hyperparameter_config)
+
     exp_config = {
         "experiment_name": "imdb_mlops_pipeline",
+        "tracking_uri": "http://34.143.176.217:5001/",
         "start_run": {
             "run_name": "untuned_imdb_sgd_5_epochs",
             "nested": True,

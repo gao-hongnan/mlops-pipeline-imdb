@@ -90,7 +90,6 @@ def extract_from_data_warehouse(
         }
 
         metadata.set_attrs(attr_dict)
-
         return metadata
     except Exception as error:
         logger.error(f"❌ Data extraction failed. Error: {error}")
