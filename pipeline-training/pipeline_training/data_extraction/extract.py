@@ -19,6 +19,7 @@ from common_utils.core.base import Connection
 from common_utils.core.logger import Logger
 
 from conf.metadata import Metadata
+from conf.init_project import QUERY
 
 
 def extract_from_data_warehouse(
@@ -112,19 +113,6 @@ def test_extract_from_data_warehouse(cfg: SimpleNamespace, logger: Logger) -> Me
         dataset=cfg.env.bigquery_raw_dataset,
         table_name=cfg.env.bigquery_raw_table_name,
     )
-
-    QUERY = """
-        SELECT *
-        FROM `gao-hongnan.imdb_dbt_filtered_movies_incremental.filtered_movies_incremental`
-        WHERE primaryTitle IS NOT NULL
-            AND originalTitle IS NOT NULL
-            AND averageRating IS NOT NULL
-            AND genres IS NOT NULL
-            AND runtimeMinutes IS NOT NULL
-            AND startYear > 2014
-        ORDER BY tconst DESC
-        LIMIT 200
-    """
 
     metadata = Metadata()
 

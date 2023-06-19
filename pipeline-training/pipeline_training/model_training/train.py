@@ -1,29 +1,34 @@
+import pickle
 import warnings
 from typing import Any, Dict
-from common_utils.core.common import seed_all
+
 import mlflow
 import numpy as np
-from rich.pretty import pprint
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import log_loss, precision_recall_fscore_support
-from sklearn.linear_model import SGDClassifier
-import pickle
+from common_utils.core.common import seed_all
 from pipeline_training.data_preparation.resampling import get_data_splits
+from pipeline_training.utils.common import log_data_splits_summary
+from rich.pretty import pprint
+from sklearn.base import BaseEstimator
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import SGDClassifier  # pylint: disable=unused-import
 from sklearn.metrics import (
-    precision_recall_fscore_support,
-    log_loss,
     accuracy_score,
-    roc_auc_score,
-    confusion_matrix,
-    classification_report,
     balanced_accuracy_score,
     brier_score_loss,
+    classification_report,
+    confusion_matrix,
+    log_loss,
+    precision_recall_fscore_support,
+    roc_auc_score,
 )
-
 
 warnings.filterwarnings("ignore")
 
 # FIXME: model is predicting all 1s
+# FIXME: write a class to encapsulate the model and its methods for training
+# NOTE: note very carefully that if you don't add the if not trial flag, the code will run into error
+# since mlflow will try to create a new experiment with the same name. There's other workarounds but for now we'll
+# just use this.
 
 
 # TODO: dump confusion matrix and classification report to image/media.
@@ -92,6 +97,18 @@ def predict_on_holdout_set(
     return performance
 
 
+def create_model(model_config: Dict[str, Any]) -> BaseEstimator:
+    model_class = eval(model_config.pop("model_name"))
+    model = model_class(**model_config)
+    return model
+
+
+def create_vectorizer(vectorizer_config: Dict[str, Any]) -> TfidfVectorizer:
+    vectorizer_class = eval(vectorizer_config.pop("vectorizer_name"))
+    vectorizer = vectorizer_class(**vectorizer_config)
+    return vectorizer
+
+
 def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
     """Train model."""
     seed_all(cfg.general.seed, seed_torch=False)
@@ -99,7 +116,7 @@ def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
     logger.info("Training model...")
 
     # Tf-idf
-    vectorizer = TfidfVectorizer(**cfg.train.vectorizer)
+    vectorizer = create_vectorizer(cfg.train.vectorizer)
 
     df = metadata.processed_df
 
@@ -114,23 +131,22 @@ def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
     # which is the tf-idf score of the word in that data point.
     # pprint(X_train.shape)
 
-    # log_data_splits_summary(
-    #     logger,
-    #     splits={
-    #         "X_train": X_train,
-    #         "X_val": X_val,
-    #         "X_test": X_test,
-    #     },
-    #     total_size=len(df),
-    # )
+    log_data_splits_summary(
+        logger,
+        splits={
+            "X_train": X_train,
+            "X_val": X_val,
+            "X_test": X_test,
+        },
+        total_size=len(df),
+    )
 
     X_train = vectorizer.fit_transform(X_train)
     X_val = vectorizer.transform(X_val)
     X_test = vectorizer.transform(X_test)
 
     # create model
-    model = SGDClassifier(**cfg.train.model)
-    pprint(model.get_params())
+    model = create_model(cfg.train.model)
 
     # Training
     for epoch in range(cfg.train.num_epochs):
@@ -166,6 +182,9 @@ def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
     # Log the model with a signature that defines the schema of the model's inputs and outputs.
     # When the model is deployed, this signature will be used to validate inputs.
     if not trial:
+        logger.info(
+            "This is not in a trial, it is likely training a final model with the best hyperparameters"
+        )
         signature = mlflow.models.infer_signature(X_test, model.predict(X_test))
 
     model_artifacts = {
@@ -211,11 +230,10 @@ def train(cfg, logger, metadata, trial=None):
         logger.info(f"MLflow run_id: {run_id}")
 
         metadata = train_model(cfg, logger, metadata, trial=trial)
-        pprint(metadata.model_artifacts)
 
         mlflow.sklearn.log_model(
             sk_model=metadata.model_artifacts["model"],
-            artifact_path="model",
+            artifact_path="registry",
             signature=metadata.model_artifacts["signature"],
         )
         logger.info("✅ Logged the model to MLflow.")
@@ -231,9 +249,10 @@ def train(cfg, logger, metadata, trial=None):
         dump_cfg_and_metadata(cfg, metadata)
 
         stores_path = cfg.general.dirs.stores.base
-        pprint(stores_path)
 
-        mlflow.log_artifacts(local_dir=stores_path, artifact_path="stores")
+        mlflow.log_artifacts(
+            local_dir=stores_path, artifact_path=cfg.exp.log_artifacts["artifact_path"]
+        )
 
         # log to model registry
         # log to model registry
@@ -241,8 +260,27 @@ def train(cfg, logger, metadata, trial=None):
             experiment_name=cfg.exp.experiment_name
         )
 
+        # FIXME: tidy up all hardcoded mlflow paths
+
+        signature = metadata.model_artifacts["signature"]
+        mlflow.models.signature.set_signature(
+            model_uri=cfg.exp.set_signature["model_uri"].format(
+                experiment_id=experiment_id, run_id=run_id
+            ),
+            signature=signature,
+        )
+
         model_version = mlflow.register_model(
-            f"runs:/{run_id}/model", "imdb", tags={"dev-exp-id": experiment_id}
+            model_uri=cfg.exp.register_model["model_uri"].format(
+                experiment_id=experiment_id, run_id=run_id
+            ),  # this is relative to the run_id! rename to registry to be in sync with local stores
+            name=cfg.exp.register_model["name"],
+            tags={
+                "dev-exp-id": experiment_id,
+                "dev-exp-name": cfg.exp.experiment_name,
+                "dev-exp-run-id": run_id,
+                "dev-exp-run-name": cfg.exp.start_run["run_name"],
+            },
         )
         mlflow.log_param("model_version", model_version.version)
         logger.info(

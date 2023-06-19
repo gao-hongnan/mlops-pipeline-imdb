@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Union
+from typing import Any, Dict, List, Union
 
 from common_utils.core.logger import Logger
 from common_utils.versioning.dvc.core import SimpleDVC

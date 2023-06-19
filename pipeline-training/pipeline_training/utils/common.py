@@ -7,9 +7,9 @@ from typing import Any, Dict, Tuple
 import joblib
 import mlflow
 import requests
-from common_utils.versioning.git.core import get_git_commit_hash
 from common_utils.core.common import YamlAdapter
 from common_utils.core.file_system_utils import list_files_recursively
+from common_utils.versioning.git.core import get_git_commit_hash
 from prettytable import PrettyTable
 
 

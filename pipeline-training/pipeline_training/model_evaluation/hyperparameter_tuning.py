@@ -1,15 +1,15 @@
 """NOTE: As mentioned, this does not touch on
 tricks and tips on how to improve the model performance."""
-from typing import Any, Dict
-
-from rich.pretty import pprint
 import copy
-import optuna
-from pipeline_training.model_training.train import train_model
-from optuna.integration.mlflow import MLflowCallback
+from typing import Any, Dict, Union
 
 import optuna
-from common_utils.core.common import seed_all
+from optuna.integration.mlflow import MLflowCallback
+from rich.pretty import pprint
+from types import SimpleNamespace
+from conf.metadata import Metadata
+
+from pipeline_training.model_training.train import train_model
 
 
 # create an Optuna objective function for hyperparameter tuning
@@ -19,12 +19,13 @@ def objective(cfg, logger, metadata, trial: optuna.trial._trial.Trial):
     logger.warning("Performing a deepcopy of the config object to avoid mutation.")
     cfg = copy.deepcopy(cfg)
     cfg.train.vectorizer["analyzer"] = trial.suggest_categorical(
-        "model__analyzer", cfg.hyperparameter.hyperparams_grid["model__analyzer"]
+        "vectorizer__analyzer",
+        cfg.hyperparameter.hyperparams_grid["vectorizer__analyzer"],
     )
     ngram_range_max = trial.suggest_int(
-        "model__ngram_range_max",
-        cfg.hyperparameter.hyperparams_grid["model__ngram_range"][0],
-        cfg.hyperparameter.hyperparams_grid["model__ngram_range"][1],
+        "vectorizer__ngram_range_max",
+        cfg.hyperparameter.hyperparams_grid["vectorizer__ngram_range"][0],
+        cfg.hyperparameter.hyperparams_grid["vectorizer__ngram_range"][1],
     )
     cfg.train.vectorizer["ngram_range"] = (
         cfg.train.vectorizer["ngram_range"][0],
@@ -60,7 +61,7 @@ def create_sampler(sampler_config: Dict[str, Any]) -> optuna.samplers.BaseSample
     return sampler
 
 
-def optimize(cfg, logger, metadata):
+def optimize(cfg, logger, metadata) -> Union[Metadata, SimpleNamespace]:
     logger.info(
         """Seeing inside objective function as well to ensure the hyperparam grid is seeded.
         See https://optuna.readthedocs.io/en/stable/faq.html for how to seed in Optuna"""
@@ -88,4 +89,14 @@ def optimize(cfg, logger, metadata):
 
     metadata.best_params = {**study.best_trial.params}
     metadata.best_params["best_trial"] = study.best_trial.number
+
+    # update the config object with the best hyperparameters
+    # FIXME: here is hardcoded and is prone to error
+    cfg.train.vectorizer["analyzer"] = study.best_params["vectorizer__analyzer"]
+    cfg.train.vectorizer["ngram_range"] = (
+        cfg.train.vectorizer["ngram_range"][0],
+        study.best_params["vectorizer__ngram_range_max"],
+    )
+    cfg.train.model["alpha"] = study.best_params["model__alpha"]
+    cfg.train.model["power_t"] = study.best_params["model__power_t"]
     return metadata, cfg

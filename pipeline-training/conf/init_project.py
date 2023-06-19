@@ -9,8 +9,9 @@ from common_utils.core.common import get_root_dir, load_env_vars
 from common_utils.versioning.git.core import get_git_commit_hash
 
 nltk.download("stopwords")
-from conf.init_dirs import create_new_dirs
 from nltk.corpus import stopwords
+
+from conf.init_dirs import create_new_dirs
 
 STOPWORDS = set(stopwords.words("english"))
 
@@ -28,6 +29,19 @@ RAW_SCHEMA = {
     "numVotes": "float64",
     "last_modified": "object",
 }
+
+QUERY = """
+    SELECT *
+    FROM `gao-hongnan.imdb_dbt_filtered_movies_incremental.filtered_movies_incremental`
+    WHERE primaryTitle IS NOT NULL
+        AND originalTitle IS NOT NULL
+        AND averageRating IS NOT NULL
+        AND genres IS NOT NULL
+        AND runtimeMinutes IS NOT NULL
+        AND startYear > 2014
+    ORDER BY tconst DESC
+    LIMIT 300
+"""
 
 
 def is_docker():
@@ -99,8 +113,13 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
     cfg.resampling = SimpleNamespace(**resampling_config)
 
     train_config = {
-        "vectorizer": {"analyzer": "char_wb", "ngram_range": (2, 5)},
+        "vectorizer": {
+            "vectorizer_name": "TfidfVectorizer",
+            "analyzer": "char_wb",
+            "ngram_range": (2, 5),
+        },
         "model": {
+            "model_name": "SGDClassifier",
             "loss": "log",
             "penalty": "l2",
             "alpha": 0.0001,
@@ -118,8 +137,8 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
 
     hyperparameter_config = {
         "hyperparams_grid": {
-            "model__analyzer": ["word", "char", "char_wb"],
-            "model__ngram_range": (3, 10),
+            "vectorizer__analyzer": ["word", "char", "char_wb"],
+            "vectorizer__ngram_range": (3, 10),
             "model__alpha": (1e-2, 1),
             "model__power_t": (0.1, 0.5),
         },
@@ -145,6 +164,14 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
             "nested": True,
             "description": "Imdb sentiment analysis with sklearn SGDClassifier",
             "tags": {"framework": "sklearn", "type": "classification"},
+        },
+        "log_artifacts": {"artifact_path": "stores"},
+        "register_model": {
+            "model_uri": "runs:/{run_id}/artifacts/model",
+            "name": "imdb_sgd",
+        },
+        "set_signature": {
+            "model_uri": "gs://gaohn/imdb/artifacts/{experiment_id}/{run_id}/artifacts/registry",
         },
     }
     cfg.exp = SimpleNamespace(**exp_config)
