@@ -51,13 +51,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 ARG GIT_COMMIT_HASH
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 
-
-
 # Copy the rest of the application
 # COPY .env .env
 COPY ${CONTEXT_DIR}/conf /pipeline-training/conf
 COPY ${CONTEXT_DIR}/gcp-storage-service-account.json /pipeline-training/gcp-storage-service-account.json
 COPY ${CONTEXT_DIR}/pipeline_training /pipeline-training/pipeline_training
-
 
 CMD ["python", "-m", "pipeline_training.pipeline"]

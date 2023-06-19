@@ -29,6 +29,23 @@ from $1$ to $10$. However, for simplification, these ratings are rounded to $0$
 or $1$ by establishing a decision threshold at $5$. Therefore, the final product
 will, based on a provided movie title and genre, yield a binary output.
 
+## Workflow
+
+### Setting up Virtual Environment
+
+We will use the training pipeline as an example to illustrate how to set up the
+virtual environment.
+
+```bash
+cd pipeline-training && \
+curl -o make_venv.sh \
+  https://raw.githubusercontent.com/gao-hongnan/common-utils/main/scripts/devops/make_venv.sh
+```
+
+```bash
+bash make_venv.sh --pyproject --dev
+```
+
 ## Kubernetes
 
 ### Setting up
