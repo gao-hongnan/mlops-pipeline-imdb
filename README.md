@@ -336,6 +336,15 @@ cd pipeline-app && \
 mkdir -p api frontend monitoring && \
 ```
 
+### Setting up Folder Structure
+
+```bash
+mkdir -p pipeline-app && \
+...
+```
+
+To fill in
+
 ### Setting up Virtual Environment
 
 ...

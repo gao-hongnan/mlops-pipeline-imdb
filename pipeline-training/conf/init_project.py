@@ -14,6 +14,7 @@ from nltk.corpus import stopwords
 from conf.init_dirs import create_new_dirs
 
 STOPWORDS = set(stopwords.words("english"))
+STOPWORDS = []
 
 # Prepare your schema outside, in production this should be in a constant file or database
 RAW_SCHEMA = {
@@ -39,8 +40,13 @@ QUERY = """
         AND genres IS NOT NULL
         AND runtimeMinutes IS NOT NULL
         AND startYear > 2014
+        AND (genres LIKE '%Drama%'
+            OR genres LIKE '%Comedy%'
+            OR genres LIKE '%Action%'
+            OR genres LIKE '%Thriller%'
+            OR genres LIKE '%Documentary%')
     ORDER BY tconst DESC
-    LIMIT 300
+    LIMIT 1000
 """
 
 
@@ -84,7 +90,7 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
 
     cfg = SimpleNamespace(**{})
     general_config = {
-        "seed": 42,
+        "seed": 1992,
         "git_commit_hash": git_commit_hash,
         "dirs": DIRS,
         "root_dir": ROOT_DIR,
@@ -107,7 +113,11 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
 
     resampling_config = {
         "strategy": {
-            "train_test_split": {"train_size": 0.7, "random_state": 42, "shuffle": True}
+            "train_test_split": {
+                "train_size": 0.7,
+                "random_state": 1992,
+                "shuffle": True,
+            }
         },
     }
     cfg.resampling = SimpleNamespace(**resampling_config)
@@ -128,7 +138,7 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
             "eta0": 0.1,
             "power_t": 0.1,
             "warm_start": True,
-            "random_state": 42,
+            "random_state": 1992,
         },
         "num_epochs": 5,
         "log_every_n_epoch": 1,
@@ -137,16 +147,16 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
 
     hyperparameter_config = {
         "hyperparams_grid": {
-            "vectorizer__analyzer": ["word", "char", "char_wb"],
+            "vectorizer__analyzer": ["word", "char_wb"],
             "vectorizer__ngram_range": (3, 10),
-            "model__alpha": (1e-2, 1),
+            "model__alpha": (0.0001, 0.0002),
             "model__power_t": (0.1, 0.5),
         },
         "create_study": {
             "study_name": "imdb_sgd_study",
             "direction": "minimize",
         },
-        "sampler": {"sampler_name": "optuna.samplers.TPESampler", "seed": 42},
+        "sampler": {"sampler_name": "optuna.samplers.TPESampler", "seed": 1992},
         "pruner": {
             "pruner_name": "optuna.pruners.MedianPruner",
             "n_startup_trials": 5,
@@ -160,7 +170,7 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
         "experiment_name": "imdb_mlops_pipeline",
         "tracking_uri": "http://34.143.176.217:5001/",
         "start_run": {
-            "run_name": "untuned_imdb_sgd_5_epochs",
+            "run_name": "tuned_imdb_sgd_5_epochs_1000_samples_no_stopwords",
             "nested": True,
             "description": "Imdb sentiment analysis with sklearn SGDClassifier",
             "tags": {"framework": "sklearn", "type": "classification"},

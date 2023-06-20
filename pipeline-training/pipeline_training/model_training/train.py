@@ -119,6 +119,8 @@ def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
     vectorizer = create_vectorizer(cfg.train.vectorizer)
 
     df = metadata.processed_df
+    pprint(df.head())
+    pprint(df["rounded_averageRating"])
 
     X = df["concat_title_genres"].to_numpy()
     y = df["rounded_averageRating"].to_numpy()
@@ -236,6 +238,7 @@ def train(cfg, logger, metadata, trial=None):
             artifact_path="registry",
             signature=metadata.model_artifacts["signature"],
         )
+
         logger.info("✅ Logged the model to MLflow.")
 
         overall_performance = metadata.model_artifacts["overall_performance"]

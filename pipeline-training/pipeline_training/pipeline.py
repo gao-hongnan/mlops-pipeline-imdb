@@ -13,8 +13,8 @@ from pipeline_training.data_preparation.transform import preprocess_data
 from pipeline_training.data_validation.validate import test_validate_raw
 from pipeline_training.model_evaluation.hyperparameter_tuning import optimize
 from pipeline_training.model_training.train import train
-from pipeline_training.model_validation.promote import ModelPromotionManager
 from mlflow.tracking import MlflowClient
+from common_utils.experiment_tracking.promoter.core import MLFlowPromotionManager
 
 
 cfg = initialize_project(ROOT_DIR)
@@ -87,8 +87,8 @@ pprint(metadata)
 
 # promote.py
 client = MlflowClient(tracking_uri=cfg.exp.tracking_uri)
-promoter = ModelPromotionManager(
-    client=client, cfg=cfg, metadata=metadata, logger=logger
+promoter = MLFlowPromotionManager(
+    client=client, model_name=cfg.exp.register_model["name"], logger=logger
 )
 
 promoter.promote_to_production(metric_name="test_accuracy")
