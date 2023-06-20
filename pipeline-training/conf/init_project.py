@@ -170,7 +170,7 @@ def initialize_project(root_dir: str) -> SimpleNamespace:
         "experiment_name": "imdb_mlops_pipeline",
         "tracking_uri": "http://34.143.176.217:5001/",
         "start_run": {
-            "run_name": "tuned_imdb_sgd_5_epochs_1000_samples_no_stopwords",
+            "run_name": "tuned_imdb_sgd_5_epochs_1000_samples_no_stopwords_low_alpha",
             "nested": True,
             "description": "Imdb sentiment analysis with sklearn SGDClassifier",
             "tags": {"framework": "sklearn", "type": "classification"},

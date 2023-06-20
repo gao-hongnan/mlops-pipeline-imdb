@@ -1,16 +1,36 @@
 # app/api.py
 from http import HTTPStatus
 from typing import Any, Dict, Optional
-
+import pickle
+from rich.pretty import pprint
+import os
 from common_utils.core.decorators import construct_response
 from fastapi import FastAPI, Request
-
-
-import main
+from api import schemas
+from api.config import get_settings
+from typing import Any, List
+import mlflow
+import pandas as pd
+from fastapi import APIRouter, HTTPException
+from api.schemas.predictions import RatingInput, RatingOutput, Rating
 
 # TODO: DESERIALIZE CFG.PKL AND METADATA.PKL
 
 from typing import List, Dict, Any, Union
+
+# TODO: Check paul's usage of api_router decorator
+api_router = APIRouter()
+
+# disabling unused-argument and redefined-builtin because of FastAPI
+# pylint: disable=unused-argument,redefined-builtin
+# Define application
+app = FastAPI(
+    title="IMDb Rating Predictor",
+    description="Predict user ratings for movies based on title and genre.",
+    version="0.1",
+)
+tracking_uri = "http://34.143.176.217:5001/"
+client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
 
 
 def process_input_data(
@@ -36,11 +56,11 @@ def validate_input(input_data: Union[str, List[str]], input_name: str) -> List[s
     return input_data
 
 
-def predict(texts: List[str], artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
+def predict(texts: List[str], vectorizer, model) -> List[Dict[str, Any]]:
     """Predict on data."""
-    X = artifacts["vectorizer"].transform(texts)
-    y_preds = artifacts["model"].predict(X)
-    y_probs = artifacts["model"].predict_proba(X)
+    X = vectorizer.transform(texts)
+    y_preds = model.predict(X)
+    y_probs = model.predict_proba(X)
 
     predictions = []
     for text, y_pred, y_prob in zip(texts, y_preds, y_probs):
@@ -54,18 +74,16 @@ def predict(texts: List[str], artifacts: Dict[str, Any]) -> List[Dict[str, Any]]
     return predictions
 
 
-# disabling unused-argument and redefined-builtin because of FastAPI
-# pylint: disable=unused-argument,redefined-builtin
-# Define application
-app = FastAPI(
-    title="IMDb Rating Predictor",
-    description="Predict user ratings for movies based on title and genre.",
-    version="0.1",
-)
+def get_latest_production_model(client, model_name):
+    model = client.get_registered_model(model_name)
+    for mv in model.latest_versions:
+        if mv.current_stage == "Production":
+            return mv
+    return None
 
 
 # pylint: disable=global-variable-undefined
-@app.on_event("startup")
+@api_router.on_event("startup")
 async def load_best_artifacts_from_mlflow():
     """
     Asynchronously load the best MLflow artifacts on startup.
@@ -92,15 +110,53 @@ async def load_best_artifacts_from_mlflow():
         `main.load_best_artifacts_from_mlflow()`.
     """
     global artifacts
-    artifacts = main.load_artifacts_from_mlflow(run_id=None)
+    global vectorizer
+    global model
+    # Usage
+    model_name = "imdb_sgd"
+    latest_production_model = get_latest_production_model(client, model_name)
+    latest_production_version = latest_production_model.version
+    latest_production_run_id = latest_production_model.run_id
+    print(
+        f"Latest production version of {model_name}: {latest_production_version} and run_id: {latest_production_run_id}"
+    )
+
+    latest_production_run = client.get_run(latest_production_run_id)
+    latest_production_experiment_id = latest_production_run.info.experiment_id
+    logged_model = f"gs://gaohn/imdb/artifacts/{latest_production_experiment_id}/{latest_production_run_id}/artifacts/registry"
+    os.environ[
+        "GOOGLE_APPLICATION_CREDENTIALS"
+    ] = "/Users/reighns/gaohn/pipeline/mlops-pipeline-imdb/pipeline-training/gcp-storage-service-account.json"
+    # model = mlflow.pyfunc.load_model(logged_model)
+    # print(model)
+    # TODO: super bad if i load from here i cannot use predict proba so i use below
+    model = mlflow.sklearn.load_model(logged_model)
+
+    artifacts = client.list_artifacts(latest_production_run_id)
+    pprint(artifacts)
+
+    stores_path = "stores"
+
+    stores_local_path = mlflow.artifacts.download_artifacts(
+        run_id=latest_production_run_id,
+        artifact_path=stores_path,
+        tracking_uri=tracking_uri,
+    )
+    pprint(stores_local_path)
+    metadata = pickle.load(open(stores_local_path + "/artifacts/metadata.pkl", "rb"))
+    pprint(metadata)
+
+    artifacts = metadata.model_artifacts
+
+    vectorizer = artifacts["vectorizer"]
 
 
-@app.get("/performance", tags=["Performance"])
+@api_router.get("/performance", tags=["Performance"])
 @construct_response
 def _performance(request: Request, filter: Optional[str] = None) -> Dict:
     """Get the performance metrics."""
     print(artifacts)
-    performance = artifacts["performance"]
+    performance = artifacts["overall_performance"]
     data = {"performance": performance.get(filter, performance)}
     response = {
         "message": HTTPStatus.OK.phrase,
@@ -110,7 +166,7 @@ def _performance(request: Request, filter: Optional[str] = None) -> Dict:
     return response
 
 
-@app.get("/args", tags=["Arguments"])
+@api_router.get("/args", tags=["Arguments"])
 @construct_response
 def _args(request: Request) -> Dict:
     """Get a specific parameter's value used for the run."""
@@ -122,7 +178,7 @@ def _args(request: Request) -> Dict:
     return response
 
 
-@app.get("/args/{arg}", tags=["Arguments"])
+@api_router.get("/args/{arg}", tags=["Arguments"])
 @construct_response
 def _arg(request: Request, arg: str) -> Dict:
     """Get a specific parameter's value used for the run."""
@@ -136,14 +192,14 @@ def _arg(request: Request, arg: str) -> Dict:
     return response
 
 
-@app.post("/predict", tags=["Prediction"])
+@api_router.post("/predict", tags=["Prediction"])
 @construct_response
 def _predict(request: Request, data: RatingInput) -> Dict[str, Any]:
     """Predict the user rating for a movie."""
-    texts = main.process_input_data(genres=data.genres, titles=data.titles)
+    texts = process_input_data(genres=data.genres, titles=data.titles)
 
     # Here `predict` is the function you use to generate predictions
-    predictions = predict(texts=texts, artifacts=artifacts)
+    predictions = predict(texts=texts, vectorizer=vectorizer, model=model)
     ratings = [Rating(**prediction) for prediction in predictions]
     ratings_output = RatingOutput(ratings=ratings)
 
@@ -155,7 +211,7 @@ def _predict(request: Request, data: RatingInput) -> Dict[str, Any]:
     return response
 
 
-@app.get("/", tags=["General"])
+@api_router.get("/", tags=["General"])
 @construct_response
 def _index(request: Request) -> Dict[str, Any]:
     """

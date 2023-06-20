@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 import mlflow
 import numpy as np
+from sklearn.pipeline import Pipeline
 from common_utils.core.common import seed_all
 from pipeline_training.data_preparation.resampling import get_data_splits
 from pipeline_training.utils.common import log_data_splits_summary
@@ -143,6 +144,7 @@ def train_model(cfg, logger, metadata, trial=None) -> Dict[str, Any]:
         total_size=len(df),
     )
 
+    # TODO: note that pipeline implicitly does
     X_train = vectorizer.fit_transform(X_train)
     X_val = vectorizer.transform(X_val)
     X_test = vectorizer.transform(X_test)

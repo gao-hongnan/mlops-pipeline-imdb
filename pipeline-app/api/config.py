@@ -38,12 +38,13 @@ class Settings(BaseSettings):
     # - Enable uvicorn reloading.
     RELOAD: bool = False
 
-    PROJECT_NAME: str = "Energy Consumption API"
+    PROJECT_NAME: str = "IMDB"
 
     # Google Cloud Platform credentials
-    GCP_PROJECT: Optional[str] = None
-    GCP_BUCKET: Optional[str] = None
-    GCP_SERVICE_ACCOUNT_JSON_PATH: Optional[str] = None
+    PROJECT_ID: Optional[str] = None
+    GCS_BUCKET_NAME: Optional[str] = None
+    GCS_BUCKET_PROJECT_NAME: Optional[str] = None
+    GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
 
     class Config:
         env_file = ".env"
