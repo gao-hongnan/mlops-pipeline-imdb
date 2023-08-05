@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 import pickle
 from rich.pretty import pprint
 import os
-from common_utils.core.decorators import construct_response
+from common_utils.core.decorators.decorators import construct_response
 from fastapi import FastAPI, Request
 from api import schemas
 from api.config import get_settings
